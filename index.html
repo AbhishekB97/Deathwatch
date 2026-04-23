@@ -125,7 +125,7 @@ canvas {
 <body>
 <div class="container">
 
-<h1>⏳ Life Dashboard</h1>
+<h1>Life Dashboard</h1>
 
 <div id="livedStats" style="margin-top:10px; font-size:18px;"></div>
 <div id="lifePercent" style="margin-top:5px; font-size:20px; font-weight:bold;"></div>
@@ -199,20 +199,20 @@ function render() {
   const now = new Date();
   const dob = new Date(localStorage.getItem("dob"));
 
-  // 🧠 lived
+  // lived
   const livedMs = now - dob;
   const livedDays = Math.floor(livedMs / (1000 * 60 * 60 * 24));
   const livedYears = (livedDays / 365.25).toFixed(2);
 
   document.getElementById("livedStats").innerHTML =
-    `🧠 You have lived <b>${livedDays.toLocaleString()}</b> days (~${livedYears} years)`;
+    `You have lived <b>${livedDays.toLocaleString()}</b> days (~${livedYears} years)`;
 
-  // 🎯 %
+  // %
   const totalLifeMs = LIFE_EXPECTANCY * 365.25 * 24 * 60 * 60 * 1000;
   const percentLife = Math.min(100, (livedMs / totalLifeMs) * 100);
 
   document.getElementById("lifePercent").innerHTML =
-    `🎯 You have used <b>${percentLife.toFixed(2)}%</b> of your expected life`;
+    `You have used <b>${percentLife.toFixed(2)}%</b> of your expected life`;
 
   document.getElementById("timelineFill").style.width = percentLife + "%";
   document.getElementById("marker").style.left = percentLife + "%";
