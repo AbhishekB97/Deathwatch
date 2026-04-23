@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Life Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #e2e8f0;
+  text-align: center;
+}
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 {
+  margin-top: 20px;
+}
+
+input, button {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  margin: 10px;
+  font-size: 16px;
+}
+
+button {
+  background: #22c55e;
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  border-radius: 15px;
+  transition: transform 0.3s, background 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.title {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.value {
+  font-size: 16px;
+  margin: 5px 0;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #334155;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.progress {
+  height: 100%;
+  background: #22c55e;
+  transition: width 1s linear;
+}
+
+/* Timeline */
+.timeline {
+  margin: 30px auto;
+  width: 90%;
+  height: 12px;
+  background: #334155;
+  border-radius: 10px;
+  position: relative;
+}
+
+.timeline-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 10px;
+  transition: width 1s linear;
+}
+
+.marker {
+  position: absolute;
+  top: -6px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  transition: left 1s linear;
+}
+
+.marker::after {
+  content: "You";
+  position: absolute;
+  top: -25px;
+  left: -10px;
+  font-size: 12px;
+}
+
+canvas {
+  margin-top: 30px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>⏳ Life Dashboard</h1>
+
+<div id="livedStats" style="margin-top:10px; font-size:18px;"></div>
+<div id="lifePercent" style="margin-top:5px; font-size:20px; font-weight:bold;"></div>
+
+<div class="timeline">
+  <div class="timeline-fill" id="timelineFill"></div>
+  <div class="marker" id="marker"></div>
+</div>
+
+<input type="date" id="dob">
+<button onclick="start()">Start</button>
+
+<div class="grid" id="cards"></div>
+
+<canvas id="chart" height="100"></canvas>
+
+</div>
+
+<script>
+let targets = [];
+let interval;
+let chart;
+
+const LIFE_EXPECTANCY = 75;
+
+function start() {
+  const dobInput = document.getElementById("dob").value;
+  if (!dobInput) return alert("Enter DOB");
+
+  localStorage.setItem("dob", dobInput);
+
+  const dob = new Date(dobInput);
+
+  targets = [30, 40, 60, 75].map(age => {
+    let d = new Date(dob);
+    d.setFullYear(d.getFullYear() + age);
+    return { age, date: d };
+  });
+
+  createCards(); // 👈 create once
+
+  render();
+  clearInterval(interval);
+  interval = setInterval(render, 1000);
+}
+
+function createCards() {
+  const container = document.getElementById("cards");
+  container.innerHTML = "";
+
+  targets.forEach(t => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.id = "card-" + t.age;
+
+    div.innerHTML = `
+      <div class="title">Age ${t.age}</div>
+      <div class="value seconds"></div>
+      <div class="value days"></div>
+      <div class="value years"></div>
+      <div class="progress-bar">
+        <div class="progress"></div>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+function render() {
+  const now = new Date();
+  const dob = new Date(localStorage.getItem("dob"));
+
+  // 🧠 lived
+  const livedMs = now - dob;
+  const livedDays = Math.floor(livedMs / (1000 * 60 * 60 * 24));
+  const livedYears = (livedDays / 365.25).toFixed(2);
+
+  document.getElementById("livedStats").innerHTML =
+    `🧠 You have lived <b>${livedDays.toLocaleString()}</b> days (~${livedYears} years)`;
+
+  // 🎯 %
+  const totalLifeMs = LIFE_EXPECTANCY * 365.25 * 24 * 60 * 60 * 1000;
+  const percentLife = Math.min(100, (livedMs / totalLifeMs) * 100);
+
+  document.getElementById("lifePercent").innerHTML =
+    `🎯 You have used <b>${percentLife.toFixed(2)}%</b> of your expected life`;
+
+  document.getElementById("timelineFill").style.width = percentLife + "%";
+  document.getElementById("marker").style.left = percentLife + "%";
+
+  const labels = [];
+  const progressData = [];
+
+  targets.forEach(t => {
+    const diff = t.date - now;
+
+    const totalLife = t.date - dob;
+    const lived = now - dob;
+
+    const percent = Math.min(100, (lived / totalLife) * 100);
+
+    const seconds = Math.max(0, Math.floor(diff / 1000));
+    const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+    const years = Math.max(0, (days / 365.25).toFixed(2));
+
+    const card = document.getElementById("card-" + t.age);
+
+    card.querySelector(".seconds").innerText = `⏱ ${seconds.toLocaleString()} sec`;
+    card.querySelector(".days").innerText = `📅 ${days.toLocaleString()} days`;
+    card.querySelector(".years").innerText = `📆 ${years} years`;
+
+    card.querySelector(".progress").style.width = percent + "%";
+
+    // urgency
+    if (days < 365) {
+      card.style.border = "1px solid red";
+      card.style.background = "rgba(255,0,0,0.15)";
+    } else if (days < 5 * 365) {
+      card.style.border = "1px solid orange";
+      card.style.background = "";
+    } else {
+      card.style.border = "";
+      card.style.background = "";
+    }
+
+    labels.push("Age " + t.age);
+    progressData.push(percent.toFixed(1));
+  });
+
+  updateChart(labels, progressData);
+}
+
+function updateChart(labels, data) {
+  const ctx = document.getElementById('chart');
+
+  if (!chart) {
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: '% Life Completed',
+          data: data
+        }]
+      },
+      options: {
+        animation: { duration: 800 },
+        scales: {
+          y: { beginAtZero: true, max: 100 }
+        }
+      }
+    });
+  } else {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.update();
+  }
+}
+
+window.onload = () => {
+  const saved = localStorage.getItem("dob");
+  if (saved) {
+    document.getElementById("dob").value = saved;
+    start();
+  }
+};
+</script>
+
+</body>
+</html>
