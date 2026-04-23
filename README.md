@@ -1,0 +1,1 @@
+You wasted precious seconds reading this.
