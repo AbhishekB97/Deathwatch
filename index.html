@@ -135,8 +135,25 @@ canvas {
   <div class="marker" id="marker"></div>
 </div>
 
-<input type="date" id="dob">
-<button onclick="start()">Start</button>
+<!-- INPUT SECTION -->
+<div id="inputSection">
+  <label for="dob" style="display:block; margin-top:15px; font-size:16px;">
+    When were you born?
+  </label>
+
+  <input type="date" id="dob" placeholder="YYYY-MM-DD">
+
+  <p style="font-size:13px; color:#94a3b8;">
+    Your data stays in your browser (not stored anywhere)
+  </p>
+
+  <button onclick="start()">Start</button>
+</div>
+
+<!-- EDIT BUTTON -->
+<button id="editBtn" onclick="editDOB()" style="display:none; margin-top:10px;">
+  Change DOB
+</button>
 
 <div class="grid" id="cards"></div>
 
@@ -165,11 +182,21 @@ function start() {
     return { age, date: d };
   });
 
-  createCards(); // 👈 create once
+  createCards();
 
   render();
   clearInterval(interval);
   interval = setInterval(render, 1000);
+
+  // Hide input, show edit button
+  document.getElementById("inputSection").style.display = "none";
+  document.getElementById("editBtn").style.display = "inline-block";
+}
+
+function editDOB() {
+  clearInterval(interval);
+  document.getElementById("inputSection").style.display = "block";
+  document.getElementById("editBtn").style.display = "none";
 }
 
 function createCards() {
@@ -199,7 +226,6 @@ function render() {
   const now = new Date();
   const dob = new Date(localStorage.getItem("dob"));
 
-  // lived
   const livedMs = now - dob;
   const livedDays = Math.floor(livedMs / (1000 * 60 * 60 * 24));
   const livedYears = (livedDays / 365.25).toFixed(2);
@@ -207,7 +233,6 @@ function render() {
   document.getElementById("livedStats").innerHTML =
     `You have lived <b>${livedDays.toLocaleString()}</b> days (~${livedYears} years)`;
 
-  // %
   const totalLifeMs = LIFE_EXPECTANCY * 365.25 * 24 * 60 * 60 * 1000;
   const percentLife = Math.min(100, (livedMs / totalLifeMs) * 100);
 
@@ -222,34 +247,47 @@ function render() {
 
   targets.forEach(t => {
     const diff = t.date - now;
+    const isPast = diff <= 0;
 
     const totalLife = t.date - dob;
     const lived = now - dob;
 
     const percent = Math.min(100, (lived / totalLife) * 100);
 
-    const seconds = Math.max(0, Math.floor(diff / 1000));
-    const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
-    const years = Math.max(0, (days / 365.25).toFixed(2));
-
     const card = document.getElementById("card-" + t.age);
 
-    card.querySelector(".seconds").innerText = `⏱ ${seconds.toLocaleString()} sec`;
-    card.querySelector(".days").innerText = `📅 ${days.toLocaleString()} days`;
-    card.querySelector(".years").innerText = `📆 ${years} years`;
+    if (isPast) {
+      const daysAgo = Math.floor(Math.abs(diff) / (1000 * 60 * 60 * 24));
 
-    card.querySelector(".progress").style.width = percent + "%";
+      card.querySelector(".seconds").innerText = "Milestone reached";
+      card.querySelector(".days").innerText = `${t.date.toDateString()}`;
+      card.querySelector(".years").innerText = `${daysAgo.toLocaleString()} days ago`;
 
-    // urgency
-    if (days < 365) {
-      card.style.border = "1px solid red";
-      card.style.background = "rgba(255,0,0,0.15)";
-    } else if (days < 5 * 365) {
-      card.style.border = "1px solid orange";
-      card.style.background = "";
+      card.querySelector(".progress").style.width = "100%";
+
+      card.style.border = "1px solid #22c55e";
+      card.style.background = "rgba(34,197,94,0.15)";
     } else {
-      card.style.border = "";
-      card.style.background = "";
+      const seconds = Math.floor(diff / 1000);
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const years = (days / 365.25).toFixed(2);
+
+      card.querySelector(".seconds").innerText = `${seconds.toLocaleString()} sec`;
+      card.querySelector(".days").innerText = `${days.toLocaleString()} days`;
+      card.querySelector(".years").innerText = `${years} years`;
+
+      card.querySelector(".progress").style.width = percent + "%";
+
+      if (days < 365) {
+        card.style.border = "1px solid red";
+        card.style.background = "rgba(255,0,0,0.15)";
+      } else if (days < 5 * 365) {
+        card.style.border = "1px solid orange";
+        card.style.background = "";
+      } else {
+        card.style.border = "";
+        card.style.background = "";
+      }
     }
 
     labels.push("Age " + t.age);
@@ -291,6 +329,9 @@ window.onload = () => {
   if (saved) {
     document.getElementById("dob").value = saved;
     start();
+
+    document.getElementById("inputSection").style.display = "none";
+    document.getElementById("editBtn").style.display = "inline-block";
   }
 };
 </script>
